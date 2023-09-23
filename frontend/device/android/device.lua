@@ -74,7 +74,6 @@ local Device = Generic:extend{
     model = android.prop.product,
     hasKeys = yes,
     hasDPad = no,
-    hasSeamlessWifiToggle = no, -- Requires losing focus to the sytem's network settings and user interaction
     hasExitOptions = no,
     hasEinkScreen = function() return android.isEink() end,
     hasColorScreen = android.isColorScreen,
@@ -116,6 +115,8 @@ local Device = Generic:extend{
     end,
 }
 
+
+
 function Device:init()
     self.screen = require("ffi/framebuffer_android"):new{device = self, debug = logger.dbg}
     self.powerd = require("device/android/powerd"):new{device = self}
@@ -146,8 +147,10 @@ function Device:init()
                 this.device.input:resetState()
             elseif ev.code == C.APP_CMD_CONFIG_CHANGED then
                 -- orientation and size changes
+                local race = 'C.APP_CMD_CONFIG_CHANGED raced'
                 if android.screen.width ~= android.getScreenWidth()
                 or android.screen.height ~= android.getScreenHeight() then
+                    race = race ..  ' and won the match. Lets rotate here!'
                     this.device.screen:resize()
                     local new_size = this.device.screen:getSize()
                     logger.info("Resizing screen to", new_size)
@@ -160,11 +163,14 @@ function Device:init()
                             FileManager.instance.focused_file)
                     end
                 end
+                logger.dbg(race)
                 -- to-do: keyboard connected, disconnected
             elseif ev.code == C.APP_CMD_WINDOW_RESIZED then
                 -- orientation and size changes
+                local race = 'APP_CMD_WINDOW_RESIZED raced'
                 if android.screen.width ~= android.getScreenWidth()
                 or android.screen.height ~= android.getScreenHeight() then
+                    race = race ..  ' and won the match. Lets rotate here!'
                     this.device.screen:resize()
                     local new_size = this.device.screen:getSize()
                     logger.info("Resizing screen to", new_size)
@@ -176,7 +182,8 @@ function Device:init()
                         FileManager.instance:reinit(FileManager.instance.path,
                             FileManager.instance.focused_file)
                     end
-                end                
+                end
+                logger.dbg(race)
             elseif ev.code == C.APP_CMD_RESUME then
                 if not android.prop.brokenLifecycle then
                     UIManager:broadcastEvent(Event:new("Resume"))
